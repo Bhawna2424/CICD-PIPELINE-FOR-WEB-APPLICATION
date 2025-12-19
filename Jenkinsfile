@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "ramansingh1410/beauty-website"
         TAG = "latest"
-        SERVER_IP = "137.184.23.94"
+        SERVER_IP = "100.27.222.106"
         SERVER_USER = "root"
     }
 
