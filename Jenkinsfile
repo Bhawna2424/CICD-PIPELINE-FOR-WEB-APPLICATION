@@ -1,47 +1,58 @@
-def gv
-
-pipeline{
+pipeline {
     agent any
 
-// if you want to push a new version of your app, just make changes in html, upgrade the tag.
-environment {
-    TAG = '1.0.5' // tag for your image
-    SERVER_IP = "137.184.23.94"  // ip of your remote server
-    SERVER_USER = "root"  // username of your remote server
-    REPO_NAME = "ankitraz/mywebsite"  // your dockerhub repo name
-    APP_NAME = "mywebsite" // name of your app
-}
+    environment {
+        DOCKER_IMAGE = "ramansingh1410/beauty-website"
+        TAG = "latest"
+        SERVER_IP = "137.184.23.94"
+        SERVER_USER = "root"
+    }
 
-    stages{
-        stage("init"){
-            steps{
-                script{
-                    gv = load "script.groovy"
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-id-pass',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                      echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    '''
                 }
             }
         }
 
-        stage("Build"){
-            steps{
-                script{
-                    gv.Build()
-                }
+        stage('Build Image') {
+            steps {
+                sh 'docker build -t $DOCKER_IMAGE:$TAG .'
             }
         }
 
-        stage("Test"){
-            steps{
-                script{
-                    gv.Test()
-                    echo "Test by webhook from github"
-                }
+        stage('Push Image') {
+            steps {
+                sh 'docker push $DOCKER_IMAGE:$TAG'
             }
         }
 
-        stage("Deploy"){
-            steps{
-                script{
-                    gv.Deploy()
+        stage('Deploy') {
+            steps {
+                sshagent(['jenkins_private_key']) {
+                    sh '''
+                      ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "
+                      docker pull $DOCKER_IMAGE:$TAG &&
+                      docker stop beauty || true &&
+                      docker rm beauty || true &&
+                      docker run -d -p 80:80 --name beauty $DOCKER_IMAGE:$TAG
+                      "
+                    '''
                 }
             }
         }
