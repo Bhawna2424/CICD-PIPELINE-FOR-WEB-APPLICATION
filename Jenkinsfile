@@ -4,8 +4,6 @@ pipeline {
     environment {
         DOCKER_IMAGE = "ramansingh1410/beauty-website"
         TAG = "latest"
-        SERVER_IP = "100.27.222.106"
-        SERVER_USER = "root"
     }
 
     stages {
@@ -44,16 +42,12 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sshagent(['jenkins_private_key']) {
-                    sh '''
-                      ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "
-                      docker pull $DOCKER_IMAGE:$TAG &&
-                      docker stop beauty || true &&
-                      docker rm beauty || true &&
-                      docker run -d -p 80:80 --name beauty $DOCKER_IMAGE:$TAG
-                      "
-                    '''
-                }
+                sh '''
+                  docker pull $DOCKER_IMAGE:$TAG
+                  docker stop beauty || true
+                  docker rm beauty || true
+                  docker run -d -p 80:80 --name beauty $DOCKER_IMAGE:$TAG
+                '''
             }
         }
     }
